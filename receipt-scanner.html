@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Receipt Scan">
+<title>Receipt Scanner</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0D0D0F;--surf:#1a1a1f;--surf2:#222228;--accent:#4F86C6;--green:#10B981;--red:#EF4444;--text:#E8E8E8;--muted:#777;--border:rgba(255,255,255,0.08)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;min-height:100vh;min-height:-webkit-fill-available;overflow-x:hidden}
+.screen{display:none;min-height:100vh;flex-direction:column}.screen.active{display:flex}
+.hdr{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);padding:52px 20px 18px;text-align:center;border-bottom:1px solid var(--border);position:relative}
+.hdr .ico{font-size:34px;margin-bottom:5px}.hdr h1{font-size:21px;font-weight:700;color:#fff;letter-spacing:-.5px}.hdr p{font-size:13px;color:var(--muted);margin-top:3px}
+.body{flex:1;padding:18px 16px 40px;overflow-y:auto}
+.btn{width:100%;padding:15px;border-radius:14px;border:none;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s,opacity .1s}
+.btn:active{transform:scale(.97);opacity:.9}
+.bp{background:var(--accent);color:#fff}.bg{background:var(--green);color:#fff}.bgh{background:var(--surf);color:var(--text);border:1px solid var(--border)}
+.card{background:var(--surf);border-radius:16px;padding:16px;border:1px solid var(--border);margin-bottom:12px}
+.ig label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px}
+.ig input{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:12px;color:var(--text);padding:13px 15px;font-size:15px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:12px}
+.ig input:focus{border-color:var(--accent)}
+.step-bar{display:flex;justify-content:center;gap:7px;padding:14px 0 2px}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .3s}
+.step-dot.on{background:var(--accent)}
+.code-wrap{background:#080810;border:1px solid rgba(79,134,198,.25);border-radius:12px;padding:14px;margin:10px 0;max-height:190px;overflow-y:auto}
+.code-wrap pre{font-family:'SF Mono','Courier New',monospace;font-size:10.5px;color:#7dd3a8;white-space:pre;line-height:1.55}
+.copy-btn{width:100%;padding:11px;border-radius:11px;border:1px solid rgba(79,134,198,.4);background:rgba(79,134,198,.12);color:#a5c4e8;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:10px;transition:all .15s}
+.copy-btn:active{background:rgba(79,134,198,.25)}
+.cam-zone{width:100%;aspect-ratio:4/3;max-height:250px;background:var(--surf);border:2px dashed rgba(79,134,198,.3);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;gap:9px}
+.cam-zone:active{transform:scale(.97);border-color:var(--accent)}
+.ic{background:var(--surf);border-radius:14px;padding:14px;border:1px solid var(--border);margin-bottom:10px}
+.i-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px}
+.i-desc{font-size:15px;font-weight:500;flex:1;padding-right:9px;line-height:1.3}
+.i-amt{font-size:17px;font-weight:700;color:var(--accent);white-space:nowrap}
+.i-del{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:0 0 0 6px}
+.i-cat{width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:9px 11px;font-size:14px;font-family:inherit;outline:none;-webkit-appearance:none}
+.bbar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:13px 16px 28px}
+.bbar-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+.blbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.bval{font-size:25px;font-weight:700}
+.brow{display:flex;gap:9px}.brow .btn{flex:1}.brow .bgh{flex:.45}
+.spin-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.spin{width:46px;height:46px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ok-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;padding:24px;text-align:center}
+.err{background:rgba(239,68,68,.11);border:1px solid rgba(239,68,68,.28);border-radius:12px;padding:11px 13px;font-size:14px;color:#fca5a5;margin-top:10px;display:none}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(80px);background:#242430;color:#fff;padding:10px 20px;border-radius:100px;font-size:14px;transition:transform .3s;z-index:999;white-space:nowrap;border:1px solid var(--border)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.gear{position:absolute;top:52px;right:16px;background:rgba(255,255,255,.1);border:none;border-radius:50%;width:36px;height:36px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.inst-row{display:flex;gap:11px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)}
+.inst-row:last-child{border-bottom:none}
+.inst-num{width:22px;height:22px;border-radius:50%;background:rgba(79,134,198,.2);color:var(--accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.inst-txt{font-size:13px;color:var(--text);line-height:1.5}
+.inst-txt b{color:#fff}
+.lnk-btn{display:inline-block;background:rgba(79,134,198,.15);border:1px solid rgba(79,134,198,.35);color:#a5c4e8;border-radius:10px;padding:7px 14px;font-size:13px;font-family:inherit;font-weight:500;cursor:pointer;text-decoration:none;margin-top:8px;transition:background .15s}
+.lnk-btn:active{background:rgba(79,134,198,.28)}
+.seclbl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:18px 0 9px}
+.how-row{display:flex;align-items:center;gap:11px;padding:7px 0}
+.how-row+.how-row{border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<input type="file" id="fi" accept="image/*" capture="environment" style="display:none">
+
+<!-- WIZARD 1: Gemini API Key -->
+<div id="s-w1" class="screen">
+  <div class="hdr"><div class="ico">🔑</div><h1>Get Your Free API Key</h1><p>Step 1 of 3</p></div>
+  <div class="body">
+    <div class="step-bar"><div class="step-dot on"></div><div class="step-dot"></div><div class="step-dot"></div></div>
+    <div class="seclbl" style="margin-top:16px">What this does</div>
+    <div class="card" style="font-size:13px;color:var(--muted);line-height:1.65">
+      Google's Gemini AI is what reads your receipt photos and figures out what each item is. The API key is free — you just need a Google account (same one as Gmail).
+    </div>
+    <div class="seclbl">Steps</div>
+    <div class="card">
+      <div class="inst-row"><div class="inst-num">1</div><div class="inst-txt">Tap the button below to open <b>Google AI Studio</b></div></div>
+      <div class="inst-row"><div class="inst-num">2</div><div class="inst-txt">Sign in with your <b>Google account</b></div></div>
+      <div class="inst-row"><div class="inst-num">3</div><div class="inst-txt">Click <b>Get API Key</b> → <b>Create API Key</b> → <b>Create API key in new project</b></div></div>
+      <div class="inst-row"><div class="inst-num">4</div><div class="inst-txt">Copy the key (starts with <b>AIza…</b>) and paste it in your Notes app for now</div></div>
+    </div>
+    <a href="https://aistudio.google.com/apikey" target="_blank" class="lnk-btn" style="width:100%;text-align:center;display:block;padding:13px">Open Google AI Studio →</a>
+    <button class="btn bp" style="margin-top:10px" onclick="goStep(2)">I have my key — Next →</button>
+  </div>
+</div>
+
+<!-- WIZARD 2: Apps Script -->
+<div id="s-w2" class="screen">
+  <div class="hdr"><div class="ico">📊</div><h1>Connect to Google Sheets</h1><p>Step 2 of 3</p></div>
+  <div class="body">
+    <div class="step-bar"><div class="step-dot"></div><div class="step-dot on"></div><div class="step-dot"></div></div>
+    <div class="seclbl" style="margin-top:16px">Steps</div>
+    <div class="card">
+      <div class="inst-row"><div class="inst-num">1</div><div class="inst-txt">Open your <b>Budget Tracker Google Sheet</b></div></div>
+      <div class="inst-row"><div class="inst-num">2</div><div class="inst-txt">At the top click <b>Extensions</b> → <b>Apps Script</b></div></div>
+      <div class="inst-row"><div class="inst-num">3</div><div class="inst-txt">You'll see a few lines of default code — <b>select all of it and delete it completely</b></div></div>
+      <div class="inst-row"><div class="inst-num">4</div><div class="inst-txt">Tap <b>Copy Code</b> below, then paste it in</div></div>
+      <div class="inst-row"><div class="inst-num">5</div><div class="inst-txt">Click the <b>💾 Save</b> button</div></div>
+      <div class="inst-row"><div class="inst-num">6</div><div class="inst-txt">Click <b>Deploy</b> → <b>New deployment</b> → gear icon ⚙️ → <b>Web app</b></div></div>
+      <div class="inst-row"><div class="inst-num">7</div><div class="inst-txt">Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b> → click <b>Deploy</b></div></div>
+      <div class="inst-row"><div class="inst-num">8</div><div class="inst-txt">It'll show a <b>Web app URL</b> — copy it and save it in Notes</div></div>
+    </div>
+    <div class="seclbl">Code to paste</div>
+    <div class="code-wrap"><pre id="script-display"></pre></div>
+    <button class="copy-btn" onclick="copyScript()">📋 Copy Code</button>
+    <button class="btn bp" onclick="goStep(3)">I deployed it — Next →</button>
+    <button class="btn bgh" style="margin-top:8px" onclick="goStep(1)">← Back</button>
+  </div>
+</div>
+
+<!-- WIZARD 3: Enter Credentials -->
+<div id="s-w3" class="screen">
+  <div class="hdr"><div class="ico">✅</div><h1>Almost Done</h1><p>Step 3 of 3</p></div>
+  <div class="body">
+    <div class="step-bar"><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot on"></div></div>
+    <div class="seclbl" style="margin-top:16px">Paste your keys here</div>
+    <div class="card">
+      <div class="ig">
+        <label>Gemini API Key (from Step 1)</label>
+        <input type="password" id="inp-key" placeholder="AIza..." autocomplete="off" spellcheck="false">
+        <label>Google Sheet Script URL (from Step 2)</label>
+        <input type="url" id="inp-url" placeholder="https://script.google.com/macros/s/..." autocomplete="off" spellcheck="false" style="margin-bottom:0">
+      </div>
+      <div id="setup-err" class="err"></div>
+    </div>
+    <button class="btn bg" style="margin-top:4px" onclick="saveSetup()">Save & Start Scanning →</button>
+    <button class="btn bgh" style="margin-top:8px" onclick="goStep(2)">← Back</button>
+    <div class="seclbl" style="margin-top:20px">Add to your iPhone home screen</div>
+    <div class="card" style="font-size:13px;color:var(--muted);line-height:1.65">
+      Open this page in <b style="color:var(--text)">Safari</b> → tap the Share button (box with arrow) → scroll down → tap <b style="color:var(--text)">Add to Home Screen</b> → tap Add. Done — it'll look like a real app.
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="s-main" class="screen">
+  <div class="hdr" style="position:relative">
+    <div class="ico">📸</div><h1>Receipt Scanner</h1><p>Tap to scan a receipt</p>
+    <button class="gear" onclick="openSettings()">⚙️</button>
+  </div>
+  <div class="body">
+    <div class="cam-zone" onclick="triggerCam()">
+      <div style="font-size:50px">📷</div>
+      <div style="font-size:16px;color:var(--muted);font-weight:500">Take a Photo</div>
+      <div style="font-size:12px;color:rgba(119,119,119,.55)">Or choose from your library</div>
+    </div>
+    <div id="main-err" class="err"></div>
+    <div class="seclbl" style="margin-top:22px">How it works</div>
+    <div class="card">
+      <div class="how-row"><div style="font-size:21px">1️⃣</div><div><div style="font-size:14px;font-weight:600">Take a photo of any receipt</div><div style="font-size:12px;color:var(--muted)">Restaurant, gas station, store — anything</div></div></div>
+      <div class="how-row"><div style="font-size:21px">2️⃣</div><div><div style="font-size:14px;font-weight:600">AI reads and categorizes it</div><div style="font-size:12px;color:var(--muted)">Sorted into your budget categories automatically</div></div></div>
+      <div class="how-row"><div style="font-size:21px">3️⃣</div><div><div style="font-size:14px;font-weight:600">One tap sends it to your sheet</div><div style="font-size:12px;color:var(--muted)">Shows up in your monthly budget instantly</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="s-load" class="screen">
+  <div class="spin-wrap">
+    <div style="font-size:50px">🧾</div>
+    <div class="spin"></div>
+    <div id="load-txt" style="font-size:16px;color:var(--muted)">Reading your receipt...</div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="s-res" class="screen">
+  <div class="hdr">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Receipt Scanned ✓</div>
+    <h1 id="r-store">Receipt</h1><p id="r-date"></p>
+  </div>
+  <div class="body" style="padding-bottom:130px">
+    <div id="r-items"></div>
+    <div id="res-err" class="err"></div>
+  </div>
+  <div class="bbar">
+    <div class="bbar-row">
+      <div><div class="blbl">Total</div><div class="bval" id="r-total" style="color:var(--green)">$0.00</div></div>
+      <div style="text-align:right"><div class="blbl">Items</div><div class="bval" id="r-count" style="color:var(--accent)">0</div></div>
+    </div>
+    <div class="brow">
+      <button class="btn bgh" onclick="show('s-main')">✕ Cancel</button>
+      <button class="btn bg" id="send-btn" onclick="sendToSheet()">Add to Budget Sheet →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div id="s-ok" class="screen">
+  <div class="ok-wrap">
+    <div style="font-size:70px">✅</div>
+    <div style="font-size:23px;font-weight:700">Added to Sheet!</div>
+    <div id="ok-detail" style="font-size:15px;color:var(--muted);line-height:1.6"></div>
+    <button class="btn bp" style="margin-top:18px;width:100%" onclick="show('s-main')">Scan Another Receipt</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Apps Script code (embedded so you only need this one file) ───────────────
+const APPS_SCRIPT = `function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Monthly Budget");
+    if (!sheet) return respond({ error: "Tab must be named 'Monthly Budget'" });
+    const date = data.date || Utilities.formatDate(
+      new Date(), Session.getScriptTimeZone(), "M/d/yyyy"
+    );
+    const results = (data.items || []).map(item => addItem(sheet, item, date));
+    return respond({ success: true, added: results.filter(r => r.ok).length });
+  } catch (err) {
+    return respond({ error: err.toString() });
+  }
+}
+
+function addItem(sheet, item, date) {
+  const vals = sheet.getDataRange().getValues();
+  const search = item.category.toUpperCase().trim();
+
+  // Find the category header row in column B
+  let catRow = -1;
+  for (let i = 0; i < vals.length; i++) {
+    if (String(vals[i][1] || "").trim().toUpperCase() === search) {
+      catRow = i + 1; // convert to 1-indexed
+      break;
+    }
+  }
+  if (catRow < 0) return { category: item.category, ok: false };
+
+  // Find the first empty entry row (rows catRow+2 through catRow+6)
+  let writeRow = -1;
+  for (let r = catRow + 2; r <= catRow + 6; r++) {
+    if (!sheet.getRange(r, 2).getValue()) { writeRow = r; break; }
+  }
+  if (writeRow < 0) return { category: item.category, ok: false, full: true };
+
+  sheet.getRange(writeRow, 2).setValue(item.description); // B: Item
+  sheet.getRange(writeRow, 3).setValue(date);             // C: Date
+  sheet.getRange(writeRow, 4).setValue(Number(item.amount)); // D: Amount
+  return { category: item.category, row: writeRow, ok: true };
+}
+
+function respond(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+
+document.getElementById('script-display').textContent = APPS_SCRIPT;
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let items=[], store='', date='';
+const CATS=["Fast Food","Clothes","Games","Subscriptions","Scout (Dog)","Savings","Gas","Taxes","Car Insurance","Car Payment","Miscellaneous"];
+const EMO={"Fast Food":"🍔","Clothes":"👕","Games":"🎮","Subscriptions":"📱","Scout (Dog)":"🐕","Savings":"🏦","Gas":"⛽","Taxes":"📋","Car Insurance":"🚗","Car Payment":"🔑","Miscellaneous":"📦"};
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function goStep(n){show('s-w'+n)}
+function init(){show(localStorage.getItem('aKey')&&localStorage.getItem('sUrl')?'s-main':'s-w1')}
+function openSettings(){document.getElementById('inp-key').value=localStorage.getItem('aKey')||'';document.getElementById('inp-url').value=localStorage.getItem('sUrl')||'';document.getElementById('setup-err').style.display='none';show('s-w3')}
+
+// ─── Copy Apps Script ─────────────────────────────────────────────────────────
+async function copyScript(){
+  try{await navigator.clipboard.writeText(APPS_SCRIPT);toast('✅ Code copied — now paste it in Apps Script')}
+  catch(e){toast('Select the code above and copy manually')}
+}
+
+// ─── Setup ────────────────────────────────────────────────────────────────────
+function saveSetup(){
+  const k=document.getElementById('inp-key').value.trim();
+  const u=document.getElementById('inp-url').value.trim();
+  const err=document.getElementById('setup-err');
+  if(!k.startsWith('AIza')){err.textContent='⚠️ Gemini key should start with AIza…';err.style.display='block';return}
+  if(!u.includes('script.google.com')){err.textContent='⚠️ Paste the full Google Script URL from step 2';err.style.display='block';return}
+  localStorage.setItem('aKey',k);localStorage.setItem('sUrl',u);
+  SFX.ready();show('s-main');toast('✅ All set — start scanning!');
+}
+
+// ─── Camera ───────────────────────────────────────────────────────────────────
+function triggerCam(){SFX.snap();document.getElementById('fi').click()}
+document.getElementById('fi').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;e.target.value='';await processImage(f)});
+
+// ─── Image Processing ─────────────────────────────────────────────────────────
+async function processImage(file){
+  show('s-load');document.getElementById('load-txt').textContent='Resizing image…';
+  try{
+    const {b64,mime}=await resize(file);
+    document.getElementById('load-txt').textContent='AI is reading your receipt…';
+    const r=await callGemini(b64,mime);
+    items=r.items||[];store=r.store||'Receipt';date=r.date||new Date().toLocaleDateString();
+    if(!items.length){show('s-main');showErr('main-err','No items found — try a clearer photo.');return}
+    document.getElementById('main-err').style.display='none';
+    renderResults();SFX.ready();show('s-res');
+  }catch(e){show('s-main');showErr('main-err','Error: '+e.message)}
+}
+
+async function resize(file,max=1200){
+  return new Promise((res,rej)=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const r=Math.min(max/img.width,max/img.height,1);
+      const c=document.createElement('canvas');
+      c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      c.toBlob(b=>{const rd=new FileReader();rd.onloadend=()=>res({b64:rd.result.split(',')[1],mime:'image/jpeg'});rd.onerror=rej;rd.readAsDataURL(b)},'image/jpeg',.85);
+    };img.onerror=rej;img.src=url;
+  });
+}
+
+// ─── Gemini API (Free) ────────────────────────────────────────────────────────
+async function callGemini(b64,mime){
+  const key=localStorage.getItem('aKey');
+  const prompt=`Analyze this receipt image. Return ONLY a valid JSON object — no markdown, no backticks, no extra text.
+
+Format: {"store":"name","date":"M/D/YYYY","items":[{"description":"item","amount":0.00,"category":"category"}],"total":0.00}
+
+Use ONLY these exact category names:
+Fast Food, Clothes, Games, Subscriptions, Scout (Dog), Savings, Gas, Taxes, Car Insurance, Car Payment, Miscellaneous
+
+Rules: Fast Food = any restaurant/cafe/drive-through. Gas = fuel or car wash. Scout (Dog) = pet supplies/vet. Subscriptions = monthly services. Amount is a number with no $ sign.`;
+
+  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}]})
+  });
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||'API error '+res.status)}
+  const d=await res.json();
+  const txt=d.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+}
+
+// ─── Results ──────────────────────────────────────────────────────────────────
+function renderResults(){
+  document.getElementById('r-store').textContent=store;
+  document.getElementById('r-date').textContent=date;
+  const c=document.getElementById('r-items');c.innerHTML='';
+  items.forEach((item,i)=>{
+    const d=document.createElement('div');d.className='ic';
+    d.innerHTML=`<div class="i-row">
+      <div class="i-desc">${esc(item.description)}</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div class="i-amt">$${(+item.amount).toFixed(2)}</div>
+        <button class="i-del" onclick="removeItem(${i})">✕</button>
+      </div>
+    </div>
+    <select class="i-cat" onchange="items[${i}].category=this.value">
+      ${CATS.map(cat=>`<option value="${cat}"${cat===item.category?' selected':''}>${EMO[cat]||'📦'} ${cat}</option>`).join('')}
+    </select>`;
+    c.appendChild(d);
+  });
+  updateBar();
+}
+
+function removeItem(i){SFX.pop();items.splice(i,1);if(!items.length){show('s-main');return}renderResults()}
+function updateBar(){
+  const t=items.reduce((s,i)=>s+(+i.amount),0);
+  document.getElementById('r-total').textContent='$'+t.toFixed(2);
+  document.getElementById('r-count').textContent=items.length;
+}
+
+// ─── Send to Sheet ────────────────────────────────────────────────────────────
+async function sendToSheet(){
+  const url=localStorage.getItem('sUrl'),btn=document.getElementById('send-btn');
+  btn.textContent='Sending…';btn.disabled=true;
+  document.getElementById('res-err').style.display='none';
+  try{
+    await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({items:items.map(i=>({description:i.description,amount:+i.amount,category:i.category})),date,store})});
+    const t=items.reduce((s,i)=>s+(+i.amount),0);
+    document.getElementById('ok-detail').innerHTML=`<strong>${items.length} item${items.length!==1?'s':''}</strong> from <strong>${esc(store)}</strong><br>Total <strong>$${t.toFixed(2)}</strong> added to your budget.`;
+    SFX.success();show('s-ok');
+  }catch(e){SFX.error();showErr('res-err','Could not reach sheet — check URL in settings ⚙️')}
+  finally{btn.textContent='Add to Budget Sheet →';btn.disabled=false}
+}
+
+// ─── Sounds: snappy attack · creamy decay ─────────────────────────────────────
+let _ac=null;
+function ac(){if(!_ac)_ac=new(window.AudioContext||window.webkitAudioContext)();if(_ac.state==='suspended')_ac.resume();return _ac}
+function tone(f,t0,dur,vol=.20){
+  try{const c=ac(),o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain();
+  o.type='sine';o.frequency.setValueAtTime(f,t0);
+  lp.type='lowpass';lp.frequency.value=2100;lp.Q.value=.5;
+  g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(vol,t0+.010);g.gain.exponentialRampToValueAtTime(.001,t0+dur);
+  o.connect(lp);lp.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+dur+.04);}catch(e){}
+}
+const SFX={
+  snap(){
+    try{const c=ac(),t=c.currentTime,n=Math.floor(c.sampleRate*.05),buf=c.createBuffer(1,n,c.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(n*.22));
+    const s=c.createBufferSource();s.buffer=buf;
+    const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1600;bp.Q.value=1.1;
+    const g=c.createGain();g.gain.setValueAtTime(.46,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);
+    s.connect(bp);bp.connect(g);g.connect(c.destination);s.start(t);s.stop(t+.06);
+    tone(370,t,.07,.10);}catch(e){}
+  },
+  ready(){const t=ac().currentTime;tone(740,t,.28,.20);tone(988,t+.10,.32,.22);tone(1480,t+.10,.20,.06)},
+  success(){const t=ac().currentTime;tone(523,t,.55,.17);tone(659,t+.04,.52,.15);tone(784,t+.08,.50,.13);tone(1046,t+.11,.36,.06)},
+  pop(){
+    try{const c=ac(),t=c.currentTime,o=c.createOscillator(),lp=c.createBiquadFilter(),g=c.createGain();
+    o.type='sine';o.frequency.setValueAtTime(500,t);o.frequency.exponentialRampToValueAtTime(170,t+.09);
+    lp.type='lowpass';lp.frequency.value=1800;
+    g.gain.setValueAtTime(.24,t);g.gain.exponentialRampToValueAtTime(.001,t+.10);
+    o.connect(lp);lp.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.13);}catch(e){}
+  },
+  error(){const t=ac().currentTime;tone(400,t,.27,.15);tone(300,t+.14,.30,.13)}
+};
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';SFX.error()}
+function esc(s){const d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+
+init();
+</script>
+</body>
+</html>
